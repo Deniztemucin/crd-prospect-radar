@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CRD Prospect Radar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* VOICE: a working sales desk tool, calm and exact, explains every number.
+   IDEA: a dealing-desk blotter for accounts: ranked rows, each with its "why now".
+   PICTURE: the ranked priority list itself, with score bars, at the top.
+   COLOUR and TYPE: State Street blues only (#001AFF, #000D80, #002060, #DEEBF7) on white; Inter Tight + Inter.
+   LAYOUT: navy header band, figure row, filters, ranked table; detail drawer on the right. */
+:root{color-scheme:light dark;
+--bg:light-dark(#fff,#040a2b);--ink:light-dark(#071040,#e9eeff);--mut:light-dark(#4b5a88,#a3b2da);
+--line:light-dark(#d3def2,#1c2a6a);--card:light-dark(#f4f8fd,#0a1450);--tint:light-dark(#DEEBF7,#122170);
+--blue:light-dark(#001AFF,#6b7bff);--navy:#000D80;--deep:#002060;--soft:light-dark(#8f9bff,#3d4fd6)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Inter,system-ui,sans-serif;overflow-x:clip}
+h1,h2,h3{font-family:"Inter Tight",Inter,sans-serif;margin:0;line-height:1.1;text-wrap:balance}
+.top{background:var(--navy);color:#fff;padding:22px max(5vw,16px) 0}
+.top h1{font-size:clamp(26px,4vw,38px)}
+.top p{margin:6px 0 16px;color:#c9d3ff;max-width:62ch}
+.tabs{display:flex;gap:4px}
+.tabs a{flex:none;color:#c9d3ff;text-decoration:none;padding:11px 14px;border-radius:8px 8px 0 0;font-weight:600}
+.tabs a[aria-current]{background:var(--bg);color:var(--ink)}
+.band{padding:22px max(5vw,16px) 48px;max-width:1340px;margin:0 auto}
+.view[hidden]{display:none}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.kpi b{display:block;font:700 clamp(24px,3vw,32px)/1.1 "Inter Tight",sans-serif;color:var(--blue)}
+.kpi span{color:var(--mut);font-size:13px}
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
+input,select,textarea,button{font:inherit;font-size:16px;color:inherit}
+input[type=search],select,input[type=number]{min-height:44px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+input[type=search]{flex:1 1 220px}
+textarea{width:100%;border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:10px;font-size:14px;line-height:1.45}
+button{min-height:44px;padding:8px 14px;border-radius:8px;border:1px solid var(--blue);background:var(--blue);color:#fff;font-weight:600;cursor:pointer}
+button.ghost{background:transparent;color:var(--blue)}
+:focus-visible{outline:3px solid var(--soft);outline-offset:2px}
+.note{color:var(--mut);font-size:13px;margin:4px 0 12px}
+table{width:100%;border-collapse:collapse}
+th{font-size:13px;color:var(--mut);text-align:left;font-weight:600;padding:8px;border-bottom:2px solid var(--line)}
+td{padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+tbody tr{cursor:pointer}tbody tr:hover{background:var(--card)}
+.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.acc{font-weight:600}.sub{color:var(--mut);font-size:13px}
+.bar{display:flex;align-items:center;gap:8px;min-width:120px}
+.bar i{flex:1;height:8px;background:var(--tint);border-radius:4px;overflow:hidden}
+.bar i u{display:block;height:100%;background:var(--blue)}
+.bar b{width:2.2em;text-align:right;font-variant-numeric:tabular-nums}
+.chip{display:inline-block;font-size:12px;padding:2px 8px;border-radius:99px;background:var(--tint);color:var(--ink);margin:2px 4px 2px 0;white-space:nowrap}
+.chip.dark{background:var(--deep);color:#fff}
+.chip.flag{background:transparent;border:1px dashed var(--blue);color:var(--blue)}
+.drawer{position:fixed;inset:0 0 0 auto;width:min(560px,100%);background:var(--bg);border-left:1px solid var(--line);box-shadow:-20px 0 40px rgb(0 13 128/.18);overflow-y:auto;z-index:5;padding:20px 22px 40px}
+.drawer[hidden]{display:none}
+.drawer h2{font-size:26px;margin-right:48px}
+.x{position:absolute;top:14px;right:14px;width:44px;padding:0;font-size:22px}
+.sec{margin-top:20px}.sec h3{font-size:16px;margin-bottom:8px}
+.big{font:700 52px/1 "Inter Tight",sans-serif;color:var(--blue)}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.sig{border-left:3px solid var(--blue);padding:6px 0 8px 12px;margin-bottom:10px}
+.sig.off{opacity:.45;border-left-style:dashed}
+.sig .t{font-weight:600}
+.mini{min-height:32px;padding:4px 10px;font-size:13px}
+ul.need{margin:0;padding-left:18px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px}
+.card h3{font-size:16px;margin-bottom:6px}
+.slider{display:grid;grid-template-columns:minmax(0,1fr) 120px 3em;gap:8px;align-items:center;margin:6px 0}
+.slider output{text-align:right;font-variant-numeric:tabular-nums}
+.flow{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;margin:10px 0 4px}
+.step{flex:1 1 170px;background:var(--navy);color:#fff;border-radius:10px;padding:12px}
+.step b{display:block;font-family:"Inter Tight";font-size:15px;margin-bottom:4px}
+.step span{font-size:13px;color:#c9d3ff}
+.step.you{background:var(--blue)}
+pre{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px;font-size:13px;overflow-x:auto}
+.msg{font-size:14px;margin-top:6px}
+.scroll{overflow-x:auto}
+@media(max-width:760px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){table{font-size:13px}.stack thead{display:none}.stack tr{display:grid;padding-block:10px}.stack td{display:flow-root;border:0;padding:3px 0;padding-inline-start:7em;text-align:start}.stack td::before{content:attr(data-l);float:inline-start;width:6.5em;margin-inline-start:-7em;color:var(--mut)}.stack td:empty{display:none}.slider{grid-template-columns:minmax(0,1fr) 90px 2.5em}}
+@media(prefers-reduced-motion:no-preference){.drawer{animation:in .18s ease-out}@keyframes in{from{transform:translateX(24px);opacity:.4}}}
+</style>
+<script>new MutationObserver(()=>{for(const c of document.querySelectorAll('.stack td:not([data-l])')){let i=0,p=c;while(p=p.previousElementSibling)i+=p.colSpan;c.dataset.l=c.closest('table').rows[0].cells[i]?.textContent||''}}).observe(document,{childList:true,subtree:true})</script>
+</head>
+<body>
+<header class="top">
+  <h1>CRD Prospect Radar</h1>
+  <p>EMEA prospecting prototype: which accounts to work this week, why now, and what to say. Built on Salesforce exports and public signals, with no writes back to Salesforce.</p>
+  <nav class="tabs scroll" id="tabs" aria-label="Views">
+    <a href="#priorities">Priorities</a><a href="#signals">Signal feed</a><a href="#setup">Scoring &amp; personas</a><a href="#data">Data &amp; go-live</a>
+  </nav>
+</header>
+<main>
+<section class="view band" id="v-priorities">
+  <div class="kpis" id="kpis"></div>
+  <div class="filters">
+    <input type="search" id="q" placeholder="Search accounts" aria-label="Search accounts">
+    <select id="fRegion" aria-label="Region"></select>
+    <select id="fOwner" aria-label="Owner"></select>
+    <select id="fStatus" aria-label="Status"><option value="">All statuses</option><option>Prospect</option><option>STT client</option><option>CRD client</option></select>
+  </div>
+  <p class="note" id="srcNote"></p>
+  <table class="stack"><thead><tr><th>#</th><th>Account</th><th>Region</th><th class="num">AUM $bn</th><th>Owner</th><th>Score</th><th>Why now</th></tr></thead><tbody id="list"></tbody></table>
+</section>
+
+<section class="view band" id="v-signals" hidden>
+  <div class="filters"><select id="fType" aria-label="Signal type"></select><label class="row"><input type="checkbox" id="fFlag"> Only flagged job ads</label></div>
+  <p class="note">Every signal, newest first. Points show what each one currently adds to its account's score after time decay and job-ad checks.</p>
+  <div id="feed"></div>
+</section>
+
+<section class="view band" id="v-setup" hidden>
+  <div class="grid2">
+    <div class="card"><h3>Signal weights</h3><p class="note">Points a brand-new, fully trusted signal adds. Each type is capped at 1.5× its weight so ten job ads can't outweigh one CIO change.</p><div id="weights"></div></div>
+    <div class="card"><h3>Fit, decay and ghost-job rules</h3><div id="rules"></div>
+      <p class="note">AUM carries the most fit weight. Job ads open longer than the stale limit, reposted ads, and ads with no other signal at the same firm in 90 days lose confidence and are flagged for a human check.</p>
+      <button class="ghost" id="resetCfg">Reset to defaults</button></div>
+  </div>
+  <div class="grid2 sec">
+    <div class="card"><h3>Test a job title</h3><p class="note">Handles accents, gendered forms such as Leiterin and (m/w/d), and VP / vice president.</p>
+      <input type="search" id="tTest" placeholder="e.g. Leiterin Handel (m/w/d)" style="width:100%"><div class="msg" id="tOut"></div></div>
+    <div class="card"><h3>Technology watch list</h3><p class="note">One per line: name | category | words to look for in job ads.</p><textarea id="techEd" rows="7"></textarea><button class="mini ghost" id="techSave">Save list</button></div>
+  </div>
+  <div class="sec"><h3>Personas and title variants</h3><p class="note">Starter list in English plus seven languages: have native speakers check it before relying on it. One line per variant as language: title. Contacts are people to reach; "hiring only" roles are ones you track but don't contact.</p><div class="grid2" id="personas"></div></div>
+</section>
+
+<section class="view band" id="v-data" hidden>
+  <h2 style="font-size:24px">How this goes live without touching Salesforce</h2>
+  <div class="flow">
+    <div class="step"><b>1 · Salesforce report</b><span>Scheduled weekly report of EMEA CRD accounts, emailed with the CSV attached.</span></div>
+    <div class="step"><b>2 · Power Automate</b><span>Saves attachments only from that sender and subject to SharePoint /ProspectRadar/inbox with a dated name.</span></div>
+    <div class="step"><b>3 · Signals file</b><span>Copilot research pass or analyst adds dated, sourced signals in the template below.</span></div>
+    <div class="step you"><b>4 · This radar</b><span>Checks columns, rejects wrong files, scores, ranks, drafts the Copilot prompt.</span></div>
+    <div class="step"><b>5 · Link in Salesforce</b><span>A URL button on the account page opens the radar at that account (…#acct-a1).</span></div>
+  </div>
+  <p class="note">Today steps 1 to 3 are manual: drop the two latest files below. Wiring the radar to read SharePoint directly, and sharing owner changes across the team, is the part that needs a developer.</p>
+  <div class="grid2 sec">
+    <div class="card"><h3>Load accounts export</h3><input type="file" id="fAcc" accept=".csv,text/csv"><div class="msg" id="mAcc"></div>
+      <p class="note">Required columns:</p><pre id="tplAcc"></pre><button class="mini ghost" data-copy="tplAcc">Copy template</button></div>
+    <div class="card"><h3>Load signals file</h3><input type="file" id="fSig" accept=".csv,text/csv"><div class="msg" id="mSig"></div>
+      <p class="note">Required columns (Posted days and Reposts only for job ads). Types: <span id="typeKeys"></span></p><pre id="tplSig"></pre><button class="mini ghost" data-copy="tplSig">Copy template</button></div>
+  </div>
+  <div class="row sec"><button id="exp">Copy ranked list as CSV</button><button class="ghost" id="dl">Download CSV</button><button class="ghost" id="resetData">Back to sample data</button></div>
+  <div class="msg" id="mExp"></div>
+</section>
+</main>
+<aside class="drawer" id="drawer" hidden aria-label="Account detail"></aside>
+
+<script>
+{
+const $=s=>document.querySelector(s);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const DAY=864e5,NOW=Date.now();
+const iso=d=>new Date(NOW-d*DAY).toISOString().slice(0,10);
+const ageOf=s=>{const t=Date.parse(s);return isNaN(t)?999:Math.max(0,(NOW-t)/DAY)};
+const store={get(k,d){try{const v=localStorage.getItem('cpr.'+k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem('cpr.'+k,JSON.stringify(v))}catch(e){}}};
+
+const TYPES={lead:'Leadership change',hire:'Hiring in tracked roles',tech:'Technology evidence',mna:'M&A / merger',pm:'Private markets expansion',prog:'Ops or tech transformation',reg:'Regulatory driver',growth:'AUM growth / mandate win',neg:'Cost cutting / outflows'};
+const DEF={w:{lead:25,hire:12,tech:15,mna:22,pm:18,prog:20,reg:10,growth:10,neg:-8},half:45,stale:45,reposts:2,aumW:30,gap:90};
+let CFG=Object.assign(structuredClone(DEF),store.get('cfg',{}));CFG.w=Object.assign({},DEF.w,CFG.w);
+
+const RG={UK:'UK & Ireland',GB:'UK & Ireland',IE:'UK & Ireland',DE:'DACH',AT:'DACH',CH:'DACH',FR:'France & Benelux',BE:'France & Benelux',NL:'France & Benelux',LU:'France & Benelux',SE:'Nordics',DK:'Nordics',NO:'Nordics',FI:'Nordics',IT:'Southern Europe',ES:'Southern Europe',PT:'Southern Europe',AE:'Middle East',SA:'Middle East',QA:'Middle East',KW:'Middle East',BH:'Middle East',OM:'Middle East'};
+const CN={'united kingdom':'UK',ireland:'IE',germany:'DE',austria:'AT',switzerland:'CH',france:'FR',belgium:'BE',netherlands:'NL',luxembourg:'LU',sweden:'SE',denmark:'DK',norway:'NO',finland:'FI',italy:'IT',spain:'ES',portugal:'PT','united arab emirates':'AE',uae:'AE','saudi arabia':'SA',qatar:'QA',kuwait:'KW',bahrain:'BH',oman:'OM'};
+const region=c=>{const k=String(c||'').trim();return RG[k.toUpperCase()]||RG[CN[k.toLowerCase()]]||'Other'};
+
+const SAMPLE_ACC=[
+['a1','Northbridge Asset Management','UK',420,'Sam Okafor','Prospect',40],['a2','Halden Capital Partners','UK',65,'Sam Okafor','Prospect',130],
+['a3','Rheinwerk Investment GmbH','DE',210,'Lena Fischer','Prospect',20],['a4','Alpenblick Vermögensverwaltung','CH',38,'Lena Fischer','STT client',95],
+['a5','Donau Kapitalanlage','AT',22,'Unassigned','Prospect',200],['a6','Seine Gestion','FR',150,'Claire Dubois','Prospect',60],
+['a7','Lowlands Pension Investments','NL',310,'Claire Dubois','STT client',15],['a8','Ardenne Asset Management','BE',18,'Claire Dubois','Prospect',300],
+['a9','Fjord Kapitalförvaltning','SE',95,'Unassigned','Prospect',45],['a10','Baltic Pension Partners','DK',55,'Unassigned','CRD client',10],
+['a11','Tevere Gestioni','IT',120,'Marco Bianchi','Prospect',75],['a12','Meseta Inversiones','ES',48,'Marco Bianchi','Prospect',160],
+['a13','Tagus Asset Management','PT',12,'Marco Bianchi','Prospect',400],['a14','Gulf Crescent Investments','AE',85,'Omar Haddad','Prospect',50],
+['a15','Najd Capital','SA',140,'Omar Haddad','Prospect',220],['a16','Pearl Bay Asset Management','QA',30,'Omar Haddad','Prospect',365],
+['a17','Thames Mutual Investments','UK',260,'Sam Okafor','CRD client',8],['a18','Liffey Global Investors','IE',75,'Sam Okafor','Prospect',90]
+].map(([id,name,country,aum,owner,status,last])=>({id,name,country,aum,owner,status,last:iso(last)}));
+const S=(acc,type,d,title,source,o={})=>({acc,type,date:iso(d),title,source,url:'',...o});
+const SAMPLE_SIG=[
+S('a1','lead',12,'New COO appointed, joins from a SimCorp shop','Press release'),
+S('a1','prog',30,'Front-office operating model review announced in half-year results','Half-year results'),
+S('a1','hire',9,'Hiring: Head of Investment Operations','Job board',{posted:9,reposts:0}),
+S('a1','tech',9,'Job ad asks for Aladdin experience, likely incumbent','Job board',{posted:9,reposts:0,tech:'Aladdin'}),
+S('a2','hire',140,'Hiring: Head of Dealing','Job board',{posted:140,reposts:3}),
+S('a3','mna',25,'Merger agreed with regional peer; two investment platforms to be combined','News'),
+S('a3','tech',18,'Job ad: "Erfahrung mit SimCorp Dimension"','Job board',{posted:18,reposts:0,tech:'SimCorp'}),
+S('a3','hire',18,'Hiring: Leiterin Handel (m/w/d)','Job board',{posted:18,reposts:0}),
+S('a4','pm',50,'Launching first private credit fund; building a private markets ops team','News'),
+S('a4','hire',35,'Hiring: Head of Private Markets Operations','Job board',{posted:35,reposts:0}),
+S('a5','neg',70,'Cost programme announced, around 8% headcount reduction','News'),
+S('a6','reg',40,'Preparing for EU T+1 settlement; trading workflow review under way','Conference talk'),
+S('a6','lead',80,'New Directeur des investissements appointed','Press release'),
+S('a7','prog',22,'Front-to-back platform tender expected next year','Trade press'),
+S('a7','growth',60,'Won a large fiduciary mandate','News'),
+S('a7','tech',22,'Job ad cites Bloomberg AIM migration','Job board',{posted:22,reposts:0,tech:'Bloomberg AIM'}),
+S('a9','lead',6,'New CIO joins from a Copenhagen pension fund','Press release'),
+S('a9','hire',6,'Hiring: OMS Business Analyst','Job board',{posted:6,reposts:0}),
+S('a10','tech',14,'Job ad: Charles River IMS support analyst','Job board',{posted:14,reposts:0,tech:'Charles River'}),
+S('a10','pm',28,'Expanding into infrastructure debt','News'),
+S('a11','reg',33,'Board flags DORA remediation of trading systems','Annual report'),
+S('a11','hire',55,'Hiring: Responsabile Trading','Job board',{posted:55,reposts:1}),
+S('a12','growth',120,'Strong inflows into fixed income funds','News'),
+S('a14','pm',15,'Private markets unit set up with an anchor investor','News'),
+S('a14','lead',15,'New Chief Operating Officer appointed','Press release'),
+S('a14','hire',20,'Hiring: Head of Investment Operations','Job board',{posted:20,reposts:0}),
+S('a15','prog',45,'Digital programme includes investment platform modernisation','Annual report'),
+S('a17','growth',30,'Acquired a credit boutique; new desk to onboard','News'),
+S('a17','tech',30,'Job ad mentions Charles River and Enfusion','Job board',{posted:30,reposts:0,tech:'Charles River'}),
+S('a18','hire',200,'Hiring: Chief Technology Officer','Job board',{posted:200,reposts:4}),
+S('a18','lead',3,'Head of Trading resigned','News')];
+
+const DEF_TECH=[['Charles River','CRD footprint','charles river, crims, crd'],['Aladdin','Competitor OMS','aladdin'],['SimCorp','Competitor OMS','simcorp, simcorp dimension'],['Bloomberg AIM','Competitor OMS','bloomberg aim, aim'],['Enfusion','Competitor OMS','enfusion'],['SS&C Eze','Competitor OMS','eze, eclipse'],['Snowflake','Adjacent data','snowflake']];
+let TECH=store.get('tech',DEF_TECH);
+const DEF_P=[
+{n:'Chief Operating Officer',c:1,v:'en: chief operating officer\nen: coo\nde: leiter operations\nfr: directeur des operations\nit: direttore operativo\nes: director de operaciones\nnl: operationeel directeur\nsv: operativ chef\nar: مدير العمليات'},
+{n:'Chief Investment Officer',c:1,v:'en: chief investment officer\nen: cio\nde: leiter kapitalanlage\nfr: directeur des investissements\nit: direttore investimenti\nes: director de inversiones\nnl: directeur beleggingen\nsv: investeringschef\nar: رئيس الاستثمار'},
+{n:'Head of Trading',c:1,v:'en: head of trading\nen: head of dealing\nde: leiter handel\nfr: responsable de la negociation\nit: responsabile trading\nes: director de trading\nnl: hoofd handel\nsv: handelschef\nar: رئيس التداول'},
+{n:'Head of Investment Operations',c:1,v:'en: head of investment operations\nen: head of middle office\nde: leiter middle office\nfr: responsable middle office\nit: responsabile middle office\nes: director de operaciones de inversion\nnl: hoofd beleggingsoperaties\nsv: chef middle office\nar: رئيس عمليات الاستثمار'},
+{n:'Chief Technology Officer',c:1,v:'en: chief technology officer\nen: cto\nen: head of technology\nde: leiter it\nfr: directeur informatique\nit: direttore it\nes: director de tecnologia\nnl: it directeur\nsv: it chef\nar: مدير التكنولوجيا'},
+{n:'Head of Private Markets Operations',c:1,v:'en: head of private markets operations\nen: head of private assets operations\nde: leiter private markets\nfr: responsable actifs non cotes\nit: responsabile private markets\nes: responsable de mercados privados'},
+{n:'Hiring only: OMS and change roles',c:0,v:'en: oms business analyst\nen: business analyst trading\nen: investment operations change\nen: implementation manager\nen: front office change\nde: business analyst handel'}];
+let PERS=store.get('pers',DEF_P);
+
+let ACC=store.get('acc',null)||SAMPLE_ACC, SIG=store.get('sig',null)||SAMPLE_SIG;
+let isSample=!store.get('acc',null);
+let owners=store.get('owners',{}), dismissed=store.get('dis',{});
+const keyOf=s=>s.acc+'|'+s.date+'|'+s.title;
+
+/* Title matching */
+const norm=t=>(' '+String(t).toLowerCase().replace(/\((?:\s*[mwdfhx]\s*\/?)+\)/g,' ').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^\p{L}\p{N}]+/gu,' ')+' ')
+ .replace(/ vice president /g,' vp ').replace(/ leiterin /g,' leiter ').replace(/ directrice /g,' directeur ').replace(/ directora /g,' director ').replace(/ responsabile /g,' head ').replace(/ responsable /g,' head ').replace(/ head of /g,' head ').replace(/ (de la|de|des|di|of|the) /g,' ').replace(/\s+/g,' ').trim();
+let VARS=[];
+const buildVars=()=>{VARS=[];PERS.forEach((p,i)=>p.v.split('\n').forEach(l=>{const m=l.match(/^\s*([a-z]{2})\s*:\s*(.+)$/i);if(m){const tk=norm(m[2]).split(' ').filter(Boolean);if(tk.length)VARS.push({p:i,lang:m[1].toUpperCase(),raw:m[2].trim(),tk})}}))};
+const matchTitle=t=>{const set=new Set(norm(t).split(' '));let best=null;for(const v of VARS){if(v.tk.every(x=>set.has(x))&&(!best||v.tk.length>best.tk.length))best=v}return best};
+const techCat=n=>{const r=TECH.find(t=>t[0].toLowerCase()===String(n||'').toLowerCase());return r?r[1]:''};
+
+/* Scoring */
+const sigsFor=id=>SIG.filter(s=>s.acc===id);
+const isJob=s=>s.posted!==undefined&&s.posted!==''&&s.posted!==null;
+function conf(s){let c=1;const f=[];
+ if(isJob(s)){const p=+s.posted,r=+(s.reposts||0);
+  if(p>CFG.stale){c*=.4;f.push('Ad open '+p+' days')}
+  if(r>=CFG.reposts){c*=.5;f.push('Reposted '+r+'×')}
+  if(!sigsFor(s.acc).some(o=>o!==s&&!isJob(o)&&ageOf(o.date)<=90&&!dismissed[keyOf(o)])){c*=.7;f.push('No corroborating signal')}
+  if(s.type==='hire'){const m=matchTitle(s.title.replace(/^hiring:\s*/i,''));if(!m){c*=.6;f.push('Role not on persona list')}}}
+ return {c,f}}
+function fit(a){const aum=+a.aum||0,tier=aum>=300?1:aum>=100?.75:aum>=40?.5:.25;
+ const st={'Prospect':10,'STT client':8,'CRD client':4}[a.status]??6;const gap=ageOf(a.last)>CFG.gap?5:0;
+ return {aum:Math.round(CFG.aumW*tier),st,gap,total:Math.round(CFG.aumW*tier)+st+gap}}
+function score(a){const F=fit(a),per={},con=[];
+ for(const s of sigsFor(a.id)){const off=!!dismissed[keyOf(s)];const {c,f}=conf(s);const d=Math.pow(.5,ageOf(s.date)/CFG.half);const v=off?0:(CFG.w[s.type]??0)*d*c;con.push({s,v,f,off});if(!off)per[s.type]=(per[s.type]||0)+v}
+ let sg=0;for(const k in per){const cap=Math.abs(CFG.w[k]||0)*1.5;sg+=Math.max(-cap,Math.min(cap,per[k]))}
+ con.sort((x,y)=>y.v-x.v);return {F,sg,total:Math.max(0,Math.min(100,Math.round(F.total+sg))),con}}
+const ownerOf=a=>owners[a.id]||a.owner||'Unassigned';
+let RANK=[];const rank=()=>{RANK=ACC.map(a=>({a,...score(a)})).sort((x,y)=>y.total-x.total)};
+
+/* Views */
+const fillSel=(el,label,vals)=>{const cur=el.value;el.innerHTML=`<option value="">${label}</option>`+vals.map(v=>`<option>${esc(v)}</option>`).join('');el.value=vals.includes(cur)?cur:''};
+function renderList(){
+ const q=$('#q').value.toLowerCase(),r=$('#fRegion').value,o=$('#fOwner').value,st=$('#fStatus').value;
+ const rows=RANK.filter(x=>(!q||x.a.name.toLowerCase().includes(q))&&(!r||region(x.a.country)===r)&&(!o||ownerOf(x.a)===o)&&(!st||x.a.status===st));
+ const hot=RANK.filter(x=>x.total>=60).length,wk=SIG.filter(s=>ageOf(s.date)<=7).length,fl=SIG.filter(s=>isJob(s)&&conf(s).f.length).length,un=ACC.filter(a=>ownerOf(a)==='Unassigned').length;
+ $('#kpis').innerHTML=[[hot,'accounts scoring 60+'],[wk,'new signals in 7 days'],[fl,'job ads flagged for a check'],[un,'accounts with no owner']].map(([n,l])=>`<div class="kpi"><b>${n}</b><span>${l}</span></div>`).join('');
+ $('#srcNote').textContent=isSample?'Sample data: fictional EMEA asset managers and made-up signals. Load your own files under Data & go-live.':`Your data: ${ACC.length} accounts, ${SIG.length} signals.`;
+ $('#list').innerHTML=rows.map((x,i)=>{const top=x.con.find(c=>c.v>0);
+  return `<tr data-id="${esc(x.a.id)}"><td class="num">${i+1}</td><td><div class="acc">${esc(x.a.name)}</div><div class="sub">${esc(x.a.status)}</div></td><td>${esc(region(x.a.country))}</td><td class="num">${esc(x.a.aum)}</td><td>${esc(ownerOf(x.a))}</td><td><div class="bar"><i><u style="width:${x.total}%"></u></i><b>${x.total}</b></div></td><td>${top?esc(top.s.title):'<span class="sub">No live signals</span>'}</td></tr>`}).join('')||'<tr><td colspan="7" class="sub">No accounts match these filters.</td></tr>';
+}
+function renderFeed(){
+ const t=$('#fType').value,fo=$('#fFlag').checked;const by=Object.fromEntries(RANK.map(x=>[x.a.id,x]));
+ const list=SIG.filter(s=>(!t||TYPES[s.type]===t)).map(s=>{const x=by[s.acc];const c=x?x.con.find(k=>k.s===s):null;return {s,c,x}}).filter(o=>!fo||(o.c&&o.c.f.length&&isJob(o.s))).sort((p,q)=>ageOf(p.s.date)-ageOf(q.s.date));
+ $('#feed').innerHTML=list.map(({s,c,x})=>`<div class="sig ${c&&c.off?'off':''}"><div class="row"><span class="chip dark">${esc(TYPES[s.type]||s.type)}</span><span class="sub">${esc(s.date)} · ${esc(s.source)}</span><span class="sub">+${c?c.v.toFixed(1):'0'} pts</span></div>
+  <div class="t">${esc(s.title)}</div><div><a href="#acct-${esc(s.acc)}">${esc(x?x.a.name:s.acc)}</a> ${c?c.f.map(f=>`<span class="chip flag">${esc(f)}</span>`).join(''):''}</div></div>`).join('')||'<p class="sub">No signals match.</p>';
+}
+const PRODUCTS=['CRD front office (OMS/PMS)','CRD for private markets','State Street Alpha front-to-back','Data and analytics'];
+function openAcc(id){
+ const x=RANK.find(r=>r.a.id===id);if(!x)return;const a=x.a,D=$('#drawer');
+ const live=x.con.filter(c=>c.v>0).slice(0,3);
+ const techs=sigsFor(id).filter(s=>s.tech);const matched=new Set(sigsFor(id).map(s=>matchTitle(s.title.replace(/^hiring:\s*/i,''))).filter(Boolean).map(m=>m.p));
+ const contacts=PERS.map((p,i)=>({p,i})).filter(o=>o.p.c);
+ const allOwners=[...new Set(ACC.map(ownerOf).concat(['Unassigned']))];
+ D.innerHTML=`<button class="x ghost" id="close" aria-label="Close">×</button>
+ <h2>${esc(a.name)}</h2><div class="sub">${esc(a.country)} · ${esc(region(a.country))} · $${esc(a.aum)}bn AUM · ${esc(a.status)} · last touch ${esc(a.last)}</div>
+ <div class="row sec"><div class="big">${x.total}</div><div class="sub">Fit ${x.F.total} (AUM ${x.F.aum}, status ${x.F.st}${x.F.gap?', coverage gap 5':''})<br>Signals ${x.sg>=0?'+':''}${x.sg.toFixed(1)}</div>
+  <label style="margin-left:auto">Owner<br><select id="own">${allOwners.map(o=>`<option ${o===ownerOf(a)?'selected':''}>${esc(o)}</option>`).join('')}</select></label></div>
+ <div class="sec"><h3>What you need to know</h3>${live.length?`<ul class="need">${live.map(c=>`<li>${esc(c.s.title)} <span class="sub">(${esc(c.s.date)}, ${esc(c.s.source)})</span></li>`).join('')}</ul>`:'<p class="sub">Nothing live. Fit only; keep on watch.</p>'}</div>
+ ${techs.length?`<div class="sec"><h3>Technology evidence</h3>${techs.map(s=>`<div><span class="chip dark">${esc(s.tech)}</span><span class="chip">${esc(techCat(s.tech)||'Not on watch list')}</span> <span class="sub">${esc(s.title)}</span></div>`).join('')}</div>`:''}
+ <div class="sec"><h3>Who to contact</h3>${contacts.map(o=>`<span class="chip ${matched.has(o.i)?'dark':''}">${esc(o.p.n)}</span>`).join('')}<p class="note">Dark = a signal at this firm points to that role.</p></div>
+ <div class="sec"><h3>Signals</h3>${x.con.map(c=>`<div class="sig ${c.off?'off':''}"><div class="row"><span class="chip dark">${esc(TYPES[c.s.type]||c.s.type)}</span><span class="sub">${esc(c.s.date)} · ${c.s.url?`<a href="${esc(c.s.url)}" target="_blank" rel="noopener">${esc(c.s.source)}</a>`:esc(c.s.source)} · +${c.v.toFixed(1)} pts</span></div>
+  <div class="t">${esc(c.s.title)}</div><div>${c.f.map(f=>`<span class="chip flag">${esc(f)}</span>`).join('')}<button class="mini ghost" data-dis="${esc(keyOf(c.s))}">${c.off?'Restore':'Not relevant'}</button></div></div>`).join('')||'<p class="sub">No signals yet.</p>'}</div>
+ <div class="sec"><h3>Draft outreach with Copilot</h3><div class="row"><select id="prod">${PRODUCTS.map(p=>`<option>${esc(p)}</option>`).join('')}</select><select id="per">${contacts.map(o=>`<option>${esc(o.p.n)}</option>`).join('')}</select></div>
+  <textarea id="prompt" rows="10" readonly class="sec"></textarea><div class="row"><button id="cp">Copy prompt</button><span class="msg" id="cpm"></span></div>
+  <p class="note">Paste into your approved Copilot. It drafts; you check every fact against the sources before sending.</p></div>`;
+ D.hidden=false;
+ const mk=()=>{$('#prompt').value=`You are helping a Charles River Development (CRD) salesperson at State Street prepare a first approach. Use only the facts below. If something is unclear, say so; do not invent figures, names or claims about our products.
+
+Account: ${a.name} (${a.country}, about $${a.aum}bn AUM, ${a.status})
+${techs.length?'Technology evidence: '+techs.map(s=>s.tech+' ('+(techCat(s.tech)||'other')+')').join(', ')+'\n':''}Recent signals:
+${live.map(c=>`- ${c.s.date} | ${TYPES[c.s.type]} | ${c.s.title} | source: ${c.s.source}${c.s.url?' '+c.s.url:''}`).join('\n')||'- none'}
+
+Product angle: ${$('#prod').value}
+Recipient persona: ${$('#per').value}
+
+Write: (1) a three-line "why now" summary, (2) an email under 120 words to that persona that opens with the most relevant signal, (3) two discovery questions for a first call. Plain British English, no hype.`};
+ mk();$('#prod').onchange=mk;$('#per').onchange=mk;
+ $('#close').onclick=closeAcc;
+ $('#own').onchange=e=>{owners[a.id]=e.target.value;store.set('owners',owners);refresh(false)};
+ $('#cp').onclick=async()=>{try{await navigator.clipboard.writeText($('#prompt').value);$('#cpm').textContent='Copied.'}catch(e){$('#prompt').select();$('#cpm').textContent='Select all and copy.'}};
+ D.querySelectorAll('[data-dis]').forEach(b=>b.onclick=()=>{const k=b.dataset.dis;if(dismissed[k])delete dismissed[k];else dismissed[k]=1;store.set('dis',dismissed);refresh(false);openAcc(id)});
+}
+function closeAcc(){$('#drawer').hidden=true;if(location.hash.startsWith('#acct-'))history.replaceState(null,'','#priorities')}
+
+function renderSetup(){
+ $('#weights').innerHTML=Object.entries(TYPES).map(([k,l])=>`<div class="slider"><label for="w-${k}">${esc(l)}</label><input type="range" id="w-${k}" min="-20" max="40" value="${CFG.w[k]}" data-w="${k}"><output>${CFG.w[k]}</output></div>`).join('');
+ const R=[['half','Signal half-life (days)',10,180],['stale','Job ad stale after (days)',14,180],['reposts','Reposts before flag',1,6],['aumW','AUM weight in fit',0,50],['gap','Coverage gap after (days)',30,365]];
+ $('#rules').innerHTML=R.map(([k,l,mn,mx])=>`<div class="slider"><label for="r-${k}">${l}</label><input type="range" id="r-${k}" min="${mn}" max="${mx}" value="${CFG[k]}" data-r="${k}"><output>${CFG[k]}</output></div>`).join('');
+ document.querySelectorAll('[data-w],[data-r]').forEach(i=>i.oninput=()=>{const v=+i.value;if(i.dataset.w)CFG.w[i.dataset.w]=v;else CFG[i.dataset.r]=v;i.nextElementSibling.textContent=v;store.set('cfg',CFG);refresh(false)});
+ $('#personas').innerHTML=PERS.map((p,i)=>`<div class="card"><h3>${esc(p.n)}</h3><div class="sub">${p.c?'Contact':'Hiring only'} · ${p.v.split('\n').filter(Boolean).length} variants</div><textarea rows="7" data-p="${i}">${esc(p.v)}</textarea></div>`).join('');
+ document.querySelectorAll('[data-p]').forEach(t=>t.onchange=()=>{PERS[+t.dataset.p].v=t.value;store.set('pers',PERS);buildVars();refresh(false);testTitle()});
+ $('#techEd').value=TECH.map(t=>t.join(' | ')).join('\n');
+}
+function testTitle(){const v=$('#tTest').value.trim();if(!v){$('#tOut').textContent='';return}const m=matchTitle(v);$('#tOut').innerHTML=m?`Matches <b>${esc(PERS[m.p].n)}</b> via ${esc(m.lang)} variant "${esc(m.raw)}".`:'No match. Add a variant to the right persona below.'}
+
+/* CSV */
+function parseCSV(txt){const rows=[];let row=[],f='',q=false;txt=txt.replace(/^﻿/,'');
+ for(let i=0;i<txt.length;i++){const ch=txt[i];if(q){if(ch==='"'){if(txt[i+1]==='"'){f+='"';i++}else q=false}else f+=ch}
+  else if(ch==='"')q=true;else if(ch===','){row.push(f);f=''}else if(ch==='\n'||ch==='\r'){if(ch==='\r'&&txt[i+1]==='\n')i++;row.push(f);rows.push(row);row=[];f=''}else f+=ch}
+ if(f||row.length){row.push(f);rows.push(row)}return rows.filter(r=>r.some(c=>c.trim()))}
+const ACOLS=['Account Name','Country','AUM (bn)','Owner','Status','Last Activity'];
+const SCOLS=['Account Name','Signal Type','Date','Title','Source','URL','Posted Days','Reposts','Technology'];
+$('#tplAcc').textContent=ACOLS.join(',')+'\nNorthbridge Asset Management,UK,420,Sam Okafor,Prospect,2026-10-15';
+$('#tplSig').textContent=SCOLS.join(',')+'\nNorthbridge Asset Management,lead,2026-11-12,New COO appointed,Press release,https://…,,,';
+$('#typeKeys').textContent=Object.keys(TYPES).join(', ');
+function readFile(inp,cols,msg,done){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{const rows=parseCSV(String(r.result));const h=(rows[0]||[]).map(c=>c.trim());
+ const req=cols.filter(c=>!['URL','Posted Days','Reposts','Technology'].includes(c));const miss=req.filter(c=>!h.includes(c));
+ if(miss.length){$(msg).textContent=`Rejected "${f.name}": missing ${miss.join(', ')}. Nothing was loaded.`;return}
+ const recs=rows.slice(1).map(r=>Object.fromEntries(h.map((k,i)=>[k,(r[i]||'').trim()])));done(recs,f.name)};r.readAsText(f)}
+const slug=s=>norm(s).replace(/ /g,'-').slice(0,40)||'x';
+$('#fAcc').onchange=()=>readFile($('#fAcc'),ACOLS,'#mAcc',(recs,n)=>{ACC=recs.filter(r=>r['Account Name']).map(r=>({id:slug(r['Account Name']),name:r['Account Name'],country:r['Country'],aum:parseFloat(r['AUM (bn)'])||0,owner:r['Owner']||'Unassigned',status:r['Status']||'Prospect',last:r['Last Activity']}));
+ if(isSample){SIG=[];store.set('sig',SIG)}isSample=false;store.set('acc',ACC);$('#mAcc').textContent=`Loaded ${ACC.length} accounts from ${n}.`;refresh(true)});
+$('#fSig').onchange=()=>readFile($('#fSig'),SCOLS,'#mSig',(recs,n)=>{const ids=new Map(ACC.map(a=>[norm(a.name),a.id]));let skip=0;
+ SIG=recs.map(r=>{const id=ids.get(norm(r['Account Name']));const t=String(r['Signal Type']).toLowerCase();if(!id||!TYPES[t]){skip++;return null}
+  return {acc:id,type:t,date:r['Date'],title:r['Title'],source:r['Source'],url:/^https?:\/\//.test(r['URL']||'')?r['URL']:'',posted:r['Posted Days']===''||r['Posted Days']===undefined?undefined:+r['Posted Days'],reposts:+(r['Reposts']||0),tech:r['Technology']||''}}).filter(Boolean);
+ store.set('sig',SIG);$('#mSig').textContent=`Loaded ${SIG.length} signals from ${n}.${skip?` Skipped ${skip} rows with an unknown account or type.`:''}`;refresh(true)});
+const csvOut=()=>{const q=v=>`"${String(v??'').replace(/"/g,'""')}"`;return ['Rank,Account,Region,AUM bn,Owner,Score,Why now'].concat(RANK.map((x,i)=>{const t=x.con.find(c=>c.v>0);return [i+1,x.a.name,region(x.a.country),x.a.aum,ownerOf(x.a),x.total,t?t.s.title:''].map(q).join(',')})).join('\n')};
+$('#exp').onclick=async()=>{try{await navigator.clipboard.writeText(csvOut());$('#mExp').textContent='Copied. Paste into Excel.'}catch(e){$('#mExp').textContent='Copy was blocked here; use Download.'}};
+$('#dl').onclick=()=>{try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csvOut()],{type:'text/csv'}));a.download='prospect-radar-'+new Date().toISOString().slice(0,10)+'.csv';a.click();$('#mExp').textContent='If nothing downloaded, this viewer blocks downloads: use Copy.'}catch(e){$('#mExp').textContent='Download blocked here; use Copy.'}};
+$('#resetData').onclick=()=>{ACC=SAMPLE_ACC;SIG=SAMPLE_SIG;isSample=true;['acc','sig','owners','dis'].forEach(k=>store.set(k,null));owners={};dismissed={};try{['acc','sig'].forEach(k=>localStorage.removeItem('cpr.'+k))}catch(e){}refresh(true)};
+$('#resetCfg').onclick=()=>{CFG=structuredClone(DEF);PERS=structuredClone(DEF_P);TECH=DEF_TECH;store.set('cfg',CFG);store.set('pers',PERS);store.set('tech',TECH);buildVars();renderSetup();refresh(false)};
+$('#techSave').onclick=()=>{TECH=$('#techEd').value.split('\n').map(l=>l.split('|').map(s=>s.trim())).filter(r=>r[0]).map(r=>[r[0],r[1]||'Other',r[2]||r[0].toLowerCase()]);store.set('tech',TECH);refresh(false)};
+document.querySelectorAll('[data-copy]').forEach(b=>b.onclick=async()=>{try{await navigator.clipboard.writeText($('#'+b.dataset.copy).textContent);b.textContent='Copied'}catch(e){b.textContent='Select and copy'}});
+
+function refresh(full){rank();fillSel($('#fRegion'),'All regions',[...new Set(ACC.map(a=>region(a.country)))].sort());fillSel($('#fOwner'),'All owners',[...new Set(ACC.map(ownerOf))].sort());renderList();renderFeed()}
+const VIEWS=['priorities','signals','setup','data'];
+function route(){const h=location.hash.slice(1);let v=VIEWS.includes(h)?h:'priorities';
+ if(h.startsWith('acct-')){v='priorities';openAcc(h.slice(5))}
+ VIEWS.forEach(n=>{$('#v-'+n).hidden=n!==v});document.querySelectorAll('#tabs a').forEach(a=>{if(a.getAttribute('href')==='#'+v)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')})}
+$('#list').onclick=e=>{const tr=e.target.closest('tr[data-id]');if(tr)openAcc(tr.dataset.id)};
+['#q','#fRegion','#fOwner','#fStatus'].forEach(s=>$(s).addEventListener('input',renderList));
+fillSel($('#fType'),'All signal types',Object.values(TYPES));$('#fType').onchange=renderFeed;$('#fFlag').onchange=renderFeed;
+$('#tTest').oninput=testTitle;
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeAcc()});
+buildVars();renderSetup();refresh(true);route();window.addEventListener('hashchange',route);
+}
+</script>
+</body>
+</html>
